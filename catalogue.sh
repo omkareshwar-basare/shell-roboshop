@@ -1,29 +1,33 @@
 #!/bin/bash
 
 USERID=$(id -u)
-LOG_FOLDER="/var/log/shell-roboshop"
-LOGS_FILE="/var/log/shell-roboshop/$0.log"
+LOGS_FOLDER="/var/log/shell-roboshop"
+LOGS_FILE="$LOGS_FOLDER/$0.log"
+R="\e[31m"
+G="\e[32m"
+Y="\e[33m"
+N="\e[0m"
 SCRIPT_DIR=$PWD
 MONGODB_HOST=172.31.19.14
 
 if [ $USERID -ne 0 ]; then
-   echo "Please run the script with root user access" | tee -a $LOGS_FILE
-   exit 1
+    echo -e "$R Please run this script with root user access $N" | tee -a $LOGS_FILE
+    exit 1
 fi
 
-mkdir -p $LOG_FOLDER
+mkdir -p $LOGS_FOLDER
 
 VALIDATE(){
-if [ $1 -ne 0 ]; then
-   echo "$2...FAILURE" | tee -a $LOGS_FILE
-   exit 1
-else
-    echo "$2...SUCCESS" | tee -a $LOGS_FILE
-fi
+    if [ $1 -ne 0 ]; then
+        echo -e "$2 ... $R FAILURE $N" | tee -a $LOGS_FILE
+        exit 1
+    else
+        echo -e "$2 ... $G SUCCESS $N" | tee -a $LOGS_FILE
+    fi
 }
 
 dnf module disable nodejs -y &>>$LOGS_FILE
-VALIDATE $? "Disabling NodeJS Default Version"
+VALIDATE $? "Disabling NodeJS Default version"
 
 dnf module enable nodejs:20 -y &>>$LOGS_FILE
 VALIDATE $? "Enabling NodeJS 20"
@@ -36,46 +40,46 @@ if [ $? -ne 0 ]; then
     useradd --system --home /app --shell /sbin/nologin --comment "roboshop system user" roboshop &>>$LOGS_FILE
     VALIDATE $? "Creating system user"
 else
-    echo -e "Roboshop already exits.....SKIPPING"
+    echo -e "Roboshop user already exist ... $Y SKIPPING $N"
 fi
 
 mkdir -p /app 
-VALIDATE $? "creating app directory"
+VALIDATE $? "Creating app directory"
 
-curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip &>>$LOGS_FILE
-VALIDATE $? "Downloading code"
+curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip  &>>$LOGS_FILE
+VALIDATE $? "Downloading catalogue code"
 
 cd /app
 VALIDATE $? "Moving to app directory"
 
 rm -rf /app/*
-VALIDATE $? "Removing Existing Code"
+VALIDATE $? "Removing existing code"
 
-unzip /tmp/catalogue.zip
-VALIDATE $? "Unzip catalogue code"
+unzip /tmp/catalogue.zip &>>$LOGS_FILE
+VALIDATE $? "Uzip catalogue code"
 
-npm install
-VALIDATE $? "Installing Dependencies"
+npm install  &>>$LOGS_FILE
+VALIDATE $? "Installing dependencies"
 
 cp $SCRIPT_DIR/catalogue.service /etc/systemd/system/catalogue.service
-VALIDATE $? "created systemctl service"
+VALIDATE $? "Created systemctl service"
 
 systemctl daemon-reload
-systemctl enable catalogue
+systemctl enable catalogue  &>>$LOGS_FILE
 systemctl start catalogue
-VALIDATE $? "Starting and enabling Catalogue"
+VALIDATE $? "Starting and enabling catalogue"
 
 cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
+dnf install mongodb-mongosh -y &>>$LOGS_FILE
 
-dnf install mongodb-mongosh -y
+INDEX=$(mongosh --host $MONGODB_HOST --quiet  --eval 'db.getMongo().getDBNames().indexOf("catalogue")')
 
-mongosh --host $$MONGODB_HOST </app/db/master-data.js
+if [ $INDEX -le 0 ]; then
+    mongosh --host $MONGODB_HOST </app/db/master-data.js
+    VALIDATE $? "Loading products"
+else
+    echo -e "Products already loaded ... $Y SKIPPING $N"
+fi
 
-
-
-
-
-
-
-
-
+systemctl restart catalogue
+VALIDATE $? "Restarting catalogue"
