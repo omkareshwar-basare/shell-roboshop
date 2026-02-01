@@ -4,6 +4,8 @@ USERID=$(id -u)
 LOG_FOLDER="/var/log/shell-roboshop"
 LOGS_FILE="/var/log/shell-roboshop/$0.log"
 
+SCRIPT_DIR=$PWD
+
 if [ $USERID -ne 0 ]; then
    echo "Please run the script with root user access" | tee -a $LOGS_FILE
    exit 1
@@ -55,7 +57,7 @@ VALIDATE $? "Unzip catalogue code"
 npm install
 VALIDATE $? "Installing Dependencies"
 
-cp catalogue.service /etc/systemd/system/catalogue.service
+cp $SCRIPT_DIR/catalogue.service /etc/systemd/system/catalogue.service
 VALIDATE $? "created systemctl service"
 
 systemctl daemon-reload
