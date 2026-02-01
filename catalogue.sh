@@ -3,8 +3,8 @@
 USERID=$(id -u)
 LOG_FOLDER="/var/log/shell-roboshop"
 LOGS_FILE="/var/log/shell-roboshop/$0.log"
-
 SCRIPT_DIR=$PWD
+MONGODB_HOST=172.31.19.14
 
 if [ $USERID -ne 0 ]; then
    echo "Please run the script with root user access" | tee -a $LOGS_FILE
@@ -64,6 +64,12 @@ systemctl daemon-reload
 systemctl enable catalogue
 systemctl start catalogue
 VALIDATE $? "Starting and enabling Catalogue"
+
+cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
+
+dnf install mongodb-mongosh -y
+
+mongosh --host $$MONGODB_HOST </app/db/master-data.js
 
 
 
