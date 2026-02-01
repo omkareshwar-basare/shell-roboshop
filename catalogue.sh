@@ -42,3 +42,29 @@ VALIDATE $? "creating app directory"
 
 curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip &>>$LOGS_FILE
 VALIDATE $? "Downloading code"
+
+cd /app
+VALIDATE $? "Moving to app directory"
+
+unzip /tmp/catalogue.zip
+VALIDATE $? "Unzip catalogue code"
+
+npm install
+VALIDATE $? "Installing Dependencies"
+
+cp catalogue.service /etc/systemd/system/catalogue.service
+VALIDATE $? "created systemctl service"
+
+systemctl daemon-reload
+systemctl enable catalogue
+systemctl start catalogue
+VALIDATE $? "Starting and enabling Catalogue"
+
+
+
+
+
+
+
+
+
